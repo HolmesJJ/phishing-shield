@@ -1,10 +1,9 @@
-import time
-import random
-
 from flask import Flask
 from flask import request
 from flask_cors import CORS
 from flask_cors import cross_origin
+from urllib.parse import urlparse
+from ssl_checker import CertInfo
 
 
 application = Flask(__name__)
@@ -22,20 +21,24 @@ def index():
 @cross_origin()
 def detect():
     data = request.get_json()
-    if "url" in data:
-        url = data["url"]
-        print(url)
-        time.sleep(1)
-        response = {
-            "code": random.randint(-1, 1),
-            "message": "success"
-        }
-    else:
-        response = {
+    if "url" not in data:
+        return {
             "code": -1,
             "message": "url not found"
         }
-    return response
+    url = data["url"]
+    if not url.startswith("http://") and not url.startswith("https://"):
+        return {
+            "code": -1,
+            "message": "success"
+        }
+    host = "https://" + urlparse(url).netloc + "/"
+    cert_info = CertInfo(host, keep_cert=False).get_info(convert_to_df=True)
+    print(cert_info)
+    return {
+        "code": 1,
+        "message": "success"
+    }
 
 
 if __name__ == "__main__":

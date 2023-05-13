@@ -1,2 +1,8 @@
+idna
 Flask
+pandas
+pyOpenSSL
 flask-cors
+cryptography
+python-dateutil
+timeout-decorator
