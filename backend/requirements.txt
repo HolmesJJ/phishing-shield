@@ -1,8 +1,11 @@
 idna
 Flask
+scipy
 pandas
 pyOpenSSL
 flask-cors
+tldextract
 cryptography
+scikit-learn
 python-dateutil
-timeout-decorator
+python-Levenshtein

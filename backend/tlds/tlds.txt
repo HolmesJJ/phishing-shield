@@ -1,0 +1,7 @@
+cn
+com
+edu
+gouv
+gov
+net
+org

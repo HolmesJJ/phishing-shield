@@ -7,8 +7,6 @@ import time
 import hashlib
 import OpenSSL
 import subprocess
-import pandas as pd
-import timeout_decorator
 
 from OpenSSL import SSL
 from socket import socket
@@ -44,7 +42,7 @@ class CertInfo:
                         values.append(item.strip('\n'))
         return values
 
-    def get_info(self, convert_to_df=False):
+    def get_info(self):
         start = time.perf_counter()
         res = self._get_cert()
         if res:
@@ -64,10 +62,7 @@ class CertInfo:
             res = self._get_cert_info(response_time)
         if not self._keep_cert and os.path.exists(self._cert_file_path):
             os.remove(self._cert_file_path)
-        if convert_to_df:
-            return self._convert_cert_info()
-        else:
-            return self._results
+        return self._results
 
     def _get_cert(self):
         sock = None
@@ -206,17 +201,16 @@ class CertInfo:
             return False
         return True
 
-    @timeout_decorator.timeout(10)
     def _connect_socket(self, port=443):
         try:
             sock = socket()
+            sock.settimeout(10)
             sock.setblocking(True)
             sock.connect((self._url, port), )
             return sock
         except (Exception,):
             return None
 
-    @timeout_decorator.timeout(10)
     def _connect_ssl(self, sock):
         try:
             ctx = SSL.Context(SSL.SSLv23_METHOD)
@@ -305,7 +299,7 @@ class CertInfo:
             result["Not_Before"] = str(not_before.strftime("%Y-%m-%d %H:%M:%S")) + " UTC"
             not_after = parser.parse(self._cert.get_notAfter().decode("utf-8"))
             result["Not_After"] = str(not_after.strftime("%Y-%m-%d %H:%M:%S")) + " UTC"
-            result['Validity_Days'] = (not_after - not_before).days
+            result["Validity_Days"] = (not_after - not_before).days
             result["Is_Expired"] = str(self._cert.has_expired())
             """Extension"""
             result["Extension"] = {}
@@ -334,66 +328,80 @@ class CertInfo:
         self._results.update(result)
         return True
 
-    def _convert_cert_info(self):
-        cert_info = self._results
-        return pd.DataFrame({
-            "Url": [cert_info["Url"] if cert_info.get("Url") else ""],
-            "Cert": [cert_info["Cert"] if cert_info.get("Cert") else ""],
-            "Response_Time": [cert_info["Response_Time"] if cert_info.get("Response_Time") else ""],
-            "MD5": [cert_info["MD5"] if cert_info.get("MD5") else ""],
-            "SHA1": [cert_info["SHA1"] if cert_info.get("SHA1") else ""],
-            "SHA-256": [cert_info["SHA-256"] if cert_info.get("SHA-256") else ""],
-            "Text": [cert_info["Text"] if cert_info.get("Text") else ""],
-            "Signature_Algorithm": [cert_info["Signature_Algorithm"] if cert_info.get("Signature_Algorithm") else ""],
-            "Public_Key_Algorithm": [cert_info["Public_Key_Algorithm"] if
-                                     cert_info.get("Public_Key_Algorithm") else ""],
-            "Public_Key_Length": [cert_info["Public_Key_Length"] if cert_info.get("Public_Key_Length") else ""],
-            "Issuer_Count": [cert_info["Issuer"]["Count"] if cert_info.get("Issuer", {}).get("Count") else ""],
-            "Issuer_Country": [cert_info["Issuer"]["Country"] if cert_info.get("Issuer", {}).get("Country") else ""],
-            "Issuer_State_Province": [cert_info["Issuer"]["State_Province"] if
-                                      cert_info.get("Issuer", {}).get("State_Province") else ""],
-            "Issuer_Organization": [cert_info["Issuer"]["Organization"] if
-                                    cert_info.get("Issuer", {}).get("Organization") else ""],
-            "Issuer_Organizational_Unit": [cert_info["Issuer"]["Organizational_Unit"] if
-                                           cert_info.get("Issuer", {}).get("Organizational_Unit") else ""],
-            "Issuer_Common_Name": [cert_info["Issuer"]["Common_Name"] if
-                                   cert_info.get("Issuer", {}).get("Common_Name") else ""],
-            "Issuer_Location": [cert_info["Issuer"]["Location"] if cert_info.get("Issuer", {}).get("Location") else ""],
-            "Issuer_Email_Address": [cert_info["Issuer"]["Email_Address"] if
-                                     cert_info.get("Issuer", {}).get("Email_Address") else ""],
-            "Issuer_Length": [cert_info["Issuer"]["Length"] if cert_info.get("Issuer", {}).get("Length") else ""],
-            "Issuer_All": [cert_info["Issuer"]["All"] if cert_info.get("Issuer", {}).get("All") else ""],
-            "Subject_Count": [cert_info["Subject"]["Count"] if cert_info.get("Subject", {}).get("Count") else ""],
-            "Subject_Country": [cert_info["Subject"]["Country"] if cert_info.get("Subject", {}).get("Country") else ""],
-            "Subject_State_Province": [cert_info["Subject"]["State_Province"] if
-                                       cert_info.get("Subject", {}).get("State_Province") else ""],
-            "Subject_Organization": [cert_info["Subject"]["Organization"] if
-                                     cert_info.get("Subject", {}).get("Organization") else ""],
-            "Subject_Organizational_Unit": [cert_info["Subject"]["Organizational_Unit"] if
-                                            cert_info.get("Subject", {}).get("Organizational_Unit") else ""],
-            "Subject_Common_Name": [cert_info["Subject"]["Common_Name"] if
-                                    cert_info.get("Subject", {}).get("Common_Name") else ""],
-            "Subject_Location": [cert_info["Subject"]["Location"] if
-                                 cert_info.get("Subject", {}).get("Location") else ""],
-            "Subject_Email_Address": [cert_info["Subject"]["Email_Address"] if
-                                      cert_info.get("Subject", {}).get("Email_Address") else ""],
-            "Subject_Length": [cert_info["Subject"]["Length"] if cert_info.get("Subject", {}).get("Length") else ""],
-            "Subject_All": [cert_info["Subject"]["All"] if cert_info.get("Subject", {}).get("All") else ""],
-            "Not_Before": [cert_info["Not_Before"] if cert_info.get("Not_Before") else ""],
-            "Not_After": [cert_info["Not_After"] if cert_info.get("Not_After") else ""],
-            "Validity_Days": [cert_info["Validity_Days"] if cert_info.get("Validity_Days") else ""],
-            "Is_Expired": [cert_info["Is_Expired"] if cert_info.get("Is_Expired") else ""],
-            "Extension_Count": [cert_info["Extension"]["Count"] if cert_info.get("Extension", {}).get("Count") else ""],
-            "Extension_CA": [cert_info["Extension"]["CA"] if cert_info.get("Extension", {}).get("CA") else ""],
-            "Extension_Subject_Alt_Names": [str(cert_info["Extension"]["Subject_Alt_Names"]) if
-                                            cert_info.get("Extension", {}).get("Subject_Alt_Names") else ""],
-            "Extension_OIDs": [str(cert_info["Extension"]["OIDs"]) if
-                               cert_info.get("Extension", {}).get("OIDs") else ""],
-            "Extension_Authority_Key_Identifier": [cert_info["Extension"]["Authority_Key_Identifier"] if
-                                                   cert_info.get("Extension", {}).get("Authority_Key_Identifier") else
-                                                   ""],
-            "Extension_Subject_Key_Identifier": [cert_info["Extension"]["Subject_Key_Identifier"] if
-                                                 cert_info.get("Extension", {}).get("Subject_Key_Identifier") else ""],
-            "Extension_All": [cert_info["Extension"]["All"] if cert_info.get("Extension", {}).get("All") else ""],
-            "Extraction_Time": [str(round(time.time() * 1000))],
-        })
+
+def export(host):
+    cert_info = CertInfo(host).get_info()
+    if not cert_info.get("Cert"):
+        return None
+    cert_info_path = PATHS["certs_dir"] + cert_info.get("Cert").split(".")[0] + ".csv"
+    with open(cert_info_path, mode="a", encoding="utf-8") as w:
+        writer = csv.writer(w)
+        header = ["Url", "Cert", "Response_Time",
+                  "MD5", "SHA1", "SHA-256", "Text", "Signature_Algorithm", "Public_Key_Algorithm",
+                  "Public_Key_Length",
+                  "Issuer_Count", "Issuer_Country", "Issuer_State_Province", "Issuer_Organization",
+                  "Issuer_Organizational_Unit", "Issuer_Common_Name", "Issuer_Location",
+                  "Issuer_Email_Address", "Issuer_Length", "Issuer_All",
+                  "Subject_Count", "Subject_Country", "Subject_State_Province", "Subject_Organization",
+                  "Subject_Organizational_Unit", "Subject_Common_Name", "Subject_Location",
+                  "Subject_Email_Address", "Subject_Length", "Subject_All",
+                  "Not_Before", "Not_After", "Validity_Days", "Is_Expired",
+                  "Extension_Count", "Extension_CA", "Extension_Subject_Alt_Names", "Extension_OIDs",
+                  "Extension_Authority_Key_Identifier", "Extension_Subject_Key_Identifier",
+                  "Extension_All", "Extraction_Time"]
+        writer.writerow(header)
+        csv_row = [
+            cert_info["Url"] if cert_info.get("Url") else "",
+            cert_info["Cert"] if cert_info.get("Cert") else "",
+            cert_info["Response_Time"] if cert_info.get("Response_Time") else "",
+            cert_info["MD5"] if cert_info.get("MD5") else "",
+            cert_info["SHA1"] if cert_info.get("SHA1") else "",
+            cert_info["SHA-256"] if cert_info.get("SHA-256") else "",
+            cert_info["Text"] if cert_info.get("Text") else "",
+            cert_info["Signature_Algorithm"] if cert_info.get("Signature_Algorithm") else "",
+            cert_info["Public_Key_Algorithm"] if cert_info.get("Public_Key_Algorithm") else "",
+            cert_info["Public_Key_Length"] if cert_info.get("Public_Key_Length") else "",
+            cert_info["Issuer"]["Count"] if cert_info.get("Issuer", {}).get("Count") else "",
+            cert_info["Issuer"]["Country"] if cert_info.get("Issuer", {}).get("Country") else "",
+            cert_info["Issuer"]["State_Province"] if cert_info.get("Issuer", {}).get("State_Province") else "",
+            cert_info["Issuer"]["Organization"] if cert_info.get("Issuer", {}).get("Organization") else "",
+            cert_info["Issuer"]["Organizational_Unit"] if cert_info.get("Issuer", {}).get(
+                "Organizational_Unit") else "",
+            cert_info["Issuer"]["Common_Name"] if cert_info.get("Issuer", {}).get("Common_Name") else "",
+            cert_info["Issuer"]["Location"] if cert_info.get("Issuer", {}).get("Location") else "",
+            cert_info["Issuer"]["Email_Address"] if cert_info.get("Issuer", {}).get("Email_Address") else "",
+            cert_info["Issuer"]["Length"] if cert_info.get("Issuer", {}).get("Length") else "",
+            cert_info["Issuer"]["All"] if cert_info.get("Issuer", {}).get("All") else "",
+            cert_info["Subject"]["Count"] if cert_info.get("Subject", {}).get("Count") else "",
+            cert_info["Subject"]["Country"] if cert_info.get("Subject", {}).get("Country") else "",
+            cert_info["Subject"]["State_Province"] if cert_info.get("Subject", {}).get("State_Province") else "",
+            cert_info["Subject"]["Organization"] if cert_info.get("Subject", {}).get("Organization") else "",
+            cert_info["Subject"]["Organizational_Unit"] if cert_info.get("Subject", {}).get(
+                "Organizational_Unit") else "",
+            cert_info["Subject"]["Common_Name"] if cert_info.get("Subject", {}).get("Common_Name") else "",
+            cert_info["Subject"]["Location"] if cert_info.get("Subject", {}).get("Location") else "",
+            cert_info["Subject"]["Email_Address"] if cert_info.get("Subject", {}).get("Email_Address") else "",
+            cert_info["Subject"]["Length"] if cert_info.get("Subject", {}).get("Length") else "",
+            cert_info["Subject"]["All"] if cert_info.get("Subject", {}).get("All") else "",
+            cert_info["Not_Before"] if cert_info.get("Not_Before") else "",
+            cert_info["Not_After"] if cert_info.get("Not_After") else "",
+            cert_info["Validity_Days"] if cert_info.get("Validity_Days") else "",
+            cert_info["Is_Expired"] if cert_info.get("Is_Expired") else "",
+            cert_info["Extension"]["Count"] if cert_info.get("Extension", {}).get("Count") else "",
+            cert_info["Extension"]["CA"] if cert_info.get("Extension", {}).get("CA") else "",
+            cert_info["Extension"]["Subject_Alt_Names"] if cert_info.get("Extension", {}).get(
+                "Subject_Alt_Names") else "",
+            cert_info["Extension"]["OIDs"] if cert_info.get("Extension", {}).get("OIDs") else "",
+            cert_info["Extension"]["Authority_Key_Identifier"] if cert_info.get("Extension", {}).get(
+                "Authority_Key_Identifier") else "",
+            cert_info["Extension"]["Subject_Key_Identifier"] if cert_info.get("Extension", {}).get(
+                "Subject_Key_Identifier") else "",
+            cert_info["Extension"]["All"] if cert_info.get("Extension", {}).get("All") else "",
+            str(round(time.time() * 1000)),
+        ]
+        writer.writerow(csv_row)
+    return cert_info_path
+
+
+if __name__ == "__main__":
+    export("https://google.com/")

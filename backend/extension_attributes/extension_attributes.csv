@@ -1,0 +1,16 @@
+OCSPNoCheck
+TLSFeature
+Unknown OID
+authorityInfoAccess
+authorityKeyIdentifier
+basicConstraints
+cRLDistributionPoints
+certificatePolicies
+extendedKeyUsage
+freshestCRL
+issuerAltName
+keyUsage
+signedCertificateTimestampList
+subjectAltName
+subjectDirectoryAttributes
+subjectKeyIdentifier
