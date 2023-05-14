@@ -144,12 +144,8 @@ class PhishFeatures:
             feature_columns = pickle.load(open(FEATURE_PATHS["feature_columns1"], "rb"))
         else:
             feature_columns = pickle.load(open(FEATURE_PATHS["feature_columns2"], "rb"))
-        feature_columns = ["Url", "Source", "Label", "Is_Phishing"] + list(feature_columns)
+        feature_columns = list(feature_columns)
         features = pd.DataFrame(columns=feature_columns)
-        features["Url"] = sample["Url"]
-        features["Source"] = sample["Source"]
-        features["Label"] = sample["Label"]
-        features["Is_Phishing"] = sample["Is_Phishing"]
         if classifier == 1:
             signature_algorithm_features = self._fe_signature_algorithm(sample)
             for column in signature_algorithm_features.columns:

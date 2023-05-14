@@ -65,11 +65,11 @@ def detect():
         scaled_features = scaler1.transform(features)
         pca_features = pd.DataFrame(data=pca1.transform(scaled_features),
                                     columns=["PC" + str(i + 1) for i in range(150)])
-        score = classifier1.predict_proba(pca_features)[:, 1]
+        score = classifier1.predict_proba(pca_features)[:, 1][0]
     else:
         features = PhishFeatures().compute_features(cert_info, classifier=2)
-        score = classifier2.predict_proba(features)[:, 1]
-    print(score)
+        score = classifier2.predict_proba(features)[:, 1][0]
+    print(host + ": " + str(score))
     return {
         "code": 1 if score > 0.5 else 0,
         "message": "success"
