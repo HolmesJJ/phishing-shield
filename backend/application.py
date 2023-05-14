@@ -1,12 +1,12 @@
 import os
 import pickle
+import tldextract
 import pandas as pd
 
 from flask import Flask
 from flask import request
 from flask_cors import CORS
 from flask_cors import cross_origin
-from urllib.parse import urlparse
 from ssl_checker import export
 from features import PhishFeatures
 
@@ -51,7 +51,8 @@ def detect():
             "code": -1,
             "message": "success"
         }
-    host = "https://" + urlparse(url).netloc
+    fqdn_parts = tldextract.extract(url)
+    host = "https://" + fqdn_parts.domain + "." + fqdn_parts.suffix
     cert_info_path = export(host)
     if cert_info_path is None:
         return {

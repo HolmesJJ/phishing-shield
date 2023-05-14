@@ -9,3 +9,4 @@ cryptography
 scikit-learn
 python-dateutil
 python-Levenshtein
+python-Levenshtein-wheels
