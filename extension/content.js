@@ -1,0 +1,1 @@
+var data={from:"content",url:window.location.href};chrome.runtime.sendMessage(data);

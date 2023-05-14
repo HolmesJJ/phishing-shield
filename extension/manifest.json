@@ -1,0 +1,27 @@
+{
+    "name": "网址检测",
+    "version": "1.0.0",
+    "manifest_version": 3,
+    "description": "A simple MV3 extension",
+    "content_scripts": [
+        {
+          "matches": ["*://*/*"],
+          "js": ["content.js"],
+          "run_at": "document_start"
+        }
+      ],
+    "permissions": [
+      "tabs","activeTab","storage"
+    ],
+    "background": {
+      "service_worker": "background.js",
+      "persitent": true
+    },
+    "action": {},
+    "icons": {
+      "16": "shield_gray_16.png",
+      "48": "shield_gray_48.png",
+      "128": "shield_gray_128.png"
+      }
+
+  }
