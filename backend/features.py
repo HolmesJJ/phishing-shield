@@ -12,7 +12,6 @@ from Levenshtein import distance
 from gibberish_detector.gib_detect_train import avg_transition_prob
 
 FEATURE_PATHS = {
-    "feature_columns": "feature_columns.pkl",
     "tlds_dir": "tlds/",
     "tiny_urls_dir": "tiny_urls/",
     "free_issuers_dir": "free_issuers/",
@@ -21,7 +20,9 @@ FEATURE_PATHS = {
     "suspicious_keywords_dir": "suspicious_keywords/",
     "cert_policies": "cert_policies/cert_policies.csv",
     "extension_attributes": "extension_attributes/extension_attributes.csv",
-    "gib_model": "gibberish_detector/gib_model.pki",
+    "gib_model": "gibberish_detector/gib_model.pkl",
+    "feature_columns1": "feature_columns/feature_columns1.pkl",
+    "feature_columns2": "feature_columns/feature_columns2.pkl",
 }
 
 '''
@@ -138,21 +139,36 @@ class PhishFeatures:
         sample = pd.concat([sample, self._extract_extension_attributes(sample)], axis=1)
         return sample
 
-    def compute_features(self, sample):
-        feature_columns = pickle.load(open(FEATURE_PATHS["feature_columns"], "rb"))
+    def compute_features(self, sample, classifier):
+        if classifier == 1:
+            feature_columns = pickle.load(open(FEATURE_PATHS["feature_columns1"], "rb"))
+        else:
+            feature_columns = pickle.load(open(FEATURE_PATHS["feature_columns2"], "rb"))
+        feature_columns = ["Url", "Source", "Label", "Is_Phishing"] + list(feature_columns)
         features = pd.DataFrame(columns=feature_columns)
-        signature_algorithm_features = self._fe_signature_algorithm(sample)
-        for column in signature_algorithm_features.columns:
-            if column in feature_columns:
-                features[column] = signature_algorithm_features[column]
-        public_key_algorithm_features = self._fe_public_key_algorithm(sample)
-        for column in public_key_algorithm_features.columns:
-            if column in feature_columns:
-                features[column] = public_key_algorithm_features[column]
-        public_key_length_features = self._fe_public_key_length(sample)
-        for column in public_key_length_features.columns:
-            if column in feature_columns:
-                features[column] = public_key_length_features[column]
+        features["Url"] = sample["Url"]
+        features["Source"] = sample["Source"]
+        features["Label"] = sample["Label"]
+        features["Is_Phishing"] = sample["Is_Phishing"]
+        if classifier == 1:
+            signature_algorithm_features = self._fe_signature_algorithm(sample)
+            for column in signature_algorithm_features.columns:
+                if column in feature_columns:
+                    features[column] = signature_algorithm_features[column]
+                else:
+                    print("--------------" + column)
+            public_key_algorithm_features = self._fe_public_key_algorithm(sample)
+            for column in public_key_algorithm_features.columns:
+                if column in feature_columns:
+                    features[column] = public_key_algorithm_features[column]
+                else:
+                    print("--------------" + column)
+            public_key_length_features = self._fe_public_key_length(sample)
+            for column in public_key_length_features.columns:
+                if column in feature_columns:
+                    features[column] = public_key_length_features[column]
+                else:
+                    print("--------------" + column)
         """Issuer Subject"""
         features["Is_Issuer_Subject_Same"] = self._fe_is_issuer_subject_same(sample)
         features["Is_Issuer_Subject_Country_Same"] = self._fe_is_issuer_subject_country_same(sample)
@@ -166,35 +182,50 @@ class PhishFeatures:
         """Issuer"""
         features["Issuer_Count"] = self._fe_issuer_count(sample)
         features["Issuer_Common_Name_Entropy"] = self._fe_issuer_common_name_entropy(sample)
-        features["Issuer_Common_Name_GIB"] = self._fe_issuer_common_name_gib(sample)
-        issuer_country_value_features = self._fe_issuer_country_value(sample)
-        for column in issuer_country_value_features.columns:
-            if column in feature_columns:
-                features[column] = issuer_country_value_features[column]
-        issuer_state_province_value_features = self._fe_issuer_state_province_value(sample)
-        for column in issuer_state_province_value_features.columns:
-            if column in feature_columns:
-                features[column] = issuer_state_province_value_features[column]
-        issuer_organization_value_features = self._fe_issuer_organization_value(sample)
-        for column in issuer_organization_value_features.columns:
-            if column in feature_columns:
-                features[column] = issuer_organization_value_features[column]
-        issuer_organizational_unit_value_features = self._fe_issuer_organizational_unit_value(sample)
-        for column in issuer_organizational_unit_value_features.columns:
-            if column in feature_columns:
-                features[column] = issuer_organizational_unit_value_features[column]
-        issuer_common_name_value_features = self._fe_issuer_common_name_value(sample)
-        for column in issuer_common_name_value_features.columns:
-            if column in feature_columns:
-                features[column] = issuer_common_name_value_features[column]
-        issuer_location_value_features = self._fe_issuer_location_value(sample)
-        for column in issuer_location_value_features.columns:
-            if column in feature_columns:
-                features[column] = issuer_location_value_features[column]
-        issuer_email_address_value_features = self._fe_issuer_email_address_value(sample)
-        for column in issuer_email_address_value_features.columns:
-            if column in feature_columns:
-                features[column] = issuer_email_address_value_features[column]
+        if classifier == 1:
+            features["Issuer_Common_Name_GIB"] = self._fe_issuer_common_name_gib(sample)
+            issuer_country_value_features = self._fe_issuer_country_value(sample)
+            for column in issuer_country_value_features.columns:
+                if column in feature_columns:
+                    features[column] = issuer_country_value_features[column]
+                else:
+                    print("--------------" + column)
+            issuer_state_province_value_features = self._fe_issuer_state_province_value(sample)
+            for column in issuer_state_province_value_features.columns:
+                if column in feature_columns:
+                    features[column] = issuer_state_province_value_features[column]
+                else:
+                    print("--------------" + column)
+            issuer_organization_value_features = self._fe_issuer_organization_value(sample)
+            for column in issuer_organization_value_features.columns:
+                if column in feature_columns:
+                    features[column] = issuer_organization_value_features[column]
+                else:
+                    print("--------------" + column)
+            issuer_organizational_unit_value_features = self._fe_issuer_organizational_unit_value(sample)
+            for column in issuer_organizational_unit_value_features.columns:
+                if column in feature_columns:
+                    features[column] = issuer_organizational_unit_value_features[column]
+                else:
+                    print("--------------" + column)
+            issuer_common_name_value_features = self._fe_issuer_common_name_value(sample)
+            for column in issuer_common_name_value_features.columns:
+                if column in feature_columns:
+                    features[column] = issuer_common_name_value_features[column]
+                else:
+                    print("--------------" + column)
+            issuer_location_value_features = self._fe_issuer_location_value(sample)
+            for column in issuer_location_value_features.columns:
+                if column in feature_columns:
+                    features[column] = issuer_location_value_features[column]
+                else:
+                    print("--------------" + column)
+            issuer_email_address_value_features = self._fe_issuer_email_address_value(sample)
+            for column in issuer_email_address_value_features.columns:
+                if column in feature_columns:
+                    features[column] = issuer_email_address_value_features[column]
+                else:
+                    print("--------------" + column)
         features["Has_Issuer_Country"] = self._fe_has_issuer_country(sample)
         features["Has_Issuer_State_Province"] = self._fe_has_issuer_state_province(sample)
         features["Has_Issuer_Organization"] = self._fe_has_issuer_organization(sample)
@@ -214,15 +245,20 @@ class PhishFeatures:
         """Subject"""
         features["Subject_Count"] = self._fe_subject_count(sample)
         features["Subject_Common_Name_Entropy"] = self._fe_subject_common_name_entropy(sample)
-        features["Subject_Common_Name_GIB"] = self._fe_subject_common_name_gib(sample)
-        subject_country_value_features = self._fe_subject_country_value(sample)
-        for column in subject_country_value_features.columns:
-            if column in feature_columns:
-                features[column] = subject_country_value_features[column]
-        subject_state_province_value_features = self._fe_subject_state_province_value(sample)
-        for column in subject_state_province_value_features.columns:
-            if column in feature_columns:
-                features[column] = subject_state_province_value_features[column]
+        if classifier == 1:
+            features["Subject_Common_Name_GIB"] = self._fe_subject_common_name_gib(sample)
+            subject_country_value_features = self._fe_subject_country_value(sample)
+            for column in subject_country_value_features.columns:
+                if column in feature_columns:
+                    features[column] = subject_country_value_features[column]
+                else:
+                    print("--------------" + column)
+            subject_state_province_value_features = self._fe_subject_state_province_value(sample)
+            for column in subject_state_province_value_features.columns:
+                if column in feature_columns:
+                    features[column] = subject_state_province_value_features[column]
+                else:
+                    print("--------------" + column)
         features["Has_Subject_Country"] = self._fe_has_subject_country(sample)
         features["Has_Subject_State_Province"] = self._fe_has_subject_state_province(sample)
         features["Has_Subject_Organization"] = self._fe_has_subject_organization(sample)
@@ -245,92 +281,117 @@ class PhishFeatures:
         features["Extension_Count"] = pd.to_numeric(sample["Extension_Count"])
         features["CA"] = self._fe_ca(sample)
         features["Subject_Alt_Names_Count"] = self._fe_subject_alt_names_count(sample)
-        features["OCSP_No_Check_Critical"] = self._fe_ocsp_no_check_critical(sample)
-        features["TLS_Feature_Critical"] = self._fe_tls_feature_critical(sample)
-        features["TLS_Feature_Features"] = self._fe_tls_feature_features(sample)
-        features["Unknown_OID_Critical"] = self._fe_unknown_oid_critical(sample)
-        unknown_oid_oid_features = self._fe_unknown_oid_oid(sample)
-        for column in unknown_oid_oid_features.columns:
-            if column in feature_columns:
-                features[column] = unknown_oid_oid_features[column]
-        unknown_oid_value_features = self._fe_unknown_oid_value(sample)
-        for column in unknown_oid_value_features.columns:
-            if column in feature_columns:
-                features[column] = unknown_oid_value_features[column]
-        features["Authority_Info_Access_Critical"] = self._fe_authority_info_access_critical(sample)
-        authority_info_access_ocsp_features = self._fe_authority_info_access_ocsp(sample)
-        for column in authority_info_access_ocsp_features.columns:
-            if column in feature_columns:
-                features[column] = authority_info_access_ocsp_features[column]
-        authority_info_access_ca_issuers_features = self._fe_authority_info_access_ca_issuers(sample)
-        for column in authority_info_access_ca_issuers_features.columns:
-            if column in feature_columns:
-                features[column] = authority_info_access_ca_issuers_features[column]
-        features["Authority_Key_Identifier_Critical"] = self._fe_authority_key_identifier_critical(sample)
-        authority_key_identifier_key_identifier_features = self._fe_authority_key_identifier_key_identifier(sample)
-        for column in authority_key_identifier_key_identifier_features.columns:
-            if column in feature_columns:
-                features[column] = authority_key_identifier_key_identifier_features[column]
-        authority_key_identifier_authority_cert_issuer_features = self._fe_authority_key_identifier_authority_cert_issuer(sample)
-        for column in authority_key_identifier_authority_cert_issuer_features.columns:
-            if column in feature_columns:
-                features[column] = authority_key_identifier_authority_cert_issuer_features[column]
-        authority_key_identifier_authority_cert_serial_number_features = self._fe_authority_key_identifier_authority_cert_serial_number(sample)
-        for column in authority_key_identifier_authority_cert_serial_number_features.columns:
-            if column in feature_columns:
-                features[column] = authority_key_identifier_authority_cert_serial_number_features[column]
-        features["Basic_Constraints_Critical"] = self._fe_basic_constraints_critical(sample)
-        features["Basic_Constraints_CA"] = self._fe_basic_constraints_ca(sample)
-        basic_constraints_path_length_features = self._fe_basic_constraints_path_length(sample)
-        for column in basic_constraints_path_length_features.columns:
-            if column in feature_columns:
-                features[column] = basic_constraints_path_length_features[column]
-        features["CRL_Distribution_Points_Critical"] = self._fe_crl_distribution_points_critical(sample)
-        crl_distribution_points_value_features = self._fe_crl_distribution_points_value(sample)
-        for column in crl_distribution_points_value_features.columns:
-            if column in feature_columns:
-                features[column] = crl_distribution_points_value_features[column]
-        features["Certificate_Policies_Critical"] = self._fe_certificate_policies_critical(sample)
-        features["Certificate_Policies_Value"] = self._fe_certificate_policies_value(sample)
-        features["Extended_Key_Usage_Critical"] = self._fe_extended_key_usage_critical(sample)
-        features["Extended_Key_Usage_Server_Auth"] = self._fe_extended_key_usage_server_auth(sample)
-        features["Extended_Key_Usage_Client_Auth"] = self._fe_extended_key_usage_client_auth(sample)
-        features["Extended_Key_Usage_Unknown_OID"] = self._fe_extended_key_usage_unknown_oid(sample)
-        features["Extended_Key_Usage_OCSP_Signing"] = self._fe_extended_key_usage_ocsp_signing(sample)
-        features["Extended_Key_Usage_Code_Signing"] = self._fe_extended_key_usage_code_signing(sample)
-        features["Extended_Key_Usage_Email_Protection"] = self._fe_extended_key_usage_email_protection(sample)
-        features["Extended_Key_Usage_Time_Stamping"] = self._fe_extended_key_usage_time_stamping(sample)
-        features["Freshest_CRL_Critical"] = self._fe_freshest_crl_critical(sample)
-        freshest_crl_value_features = self._fe_freshest_crl_value(sample)
-        for column in freshest_crl_value_features.columns:
-            if column in feature_columns:
-                features[column] = freshest_crl_value_features[column]
-        features["Issuer_Alt_Name_Critical"] = self._fe_issuer_alt_name_critical(sample)
-        issuer_alt_name_value_features = self._fe_issuer_alt_name_value(sample)
-        for column in issuer_alt_name_value_features.columns:
-            if column in feature_columns:
-                features[column] = issuer_alt_name_value_features[column]
-        features["Key_Usage_Critical"] = self._fe_key_usage_critical(sample)
-        features["Key_Usage_Digital_Signature"] = self._fe_key_usage_digital_signature(sample)
-        features["Key_Usage_Content_Commitment"] = self._fe_key_usage_content_commitment(sample)
-        features["Key_Usage_Key_Encipherment"] = self._fe_key_usage_key_encipherment(sample)
-        features["Key_Usage_Data_Encipherment"] = self._fe_key_usage_data_encipherment(sample)
-        features["Key_Usage_Key_Agreement"] = self._fe_key_usage_key_agreement(sample)
-        features["Key_Usage_Key_Cert_Sign"] = self._fe_key_usage_key_cert_sign(sample)
-        features["Key_Usage_Crl_Sign"] = self._fe_key_usage_crl_sign(sample)
-        features["Key_Usage_Encipher_Only"] = self._fe_key_usage_encipher_only(sample)
-        features["Key_Usage_Decipher_Only"] = self._fe_key_usage_decipher_only(sample)
-        features["Signed_Certificate_Timestamp_List_Critical"] = self._fe_signed_certificate_timestamp_list_critical(
-            sample)
-        features["Signed_Certificate_Timestamp_List_Value"] = self._fe_signed_certificate_timestamp_list_value(sample)
-        features["Subject_Alt_Name_Critical"] = self._fe_subject_alt_name_critical(sample)
-        features["Subject_Alt_Name_Value"] = self._fe_subject_alt_name_value(sample)
-        features["Subject_Directory_Attributes_Critical"] = self._fe_subject_directory_attributes_critical(sample)
-        subject_directory_attributes_value_features = self._fe_subject_directory_attributes_value(sample)
-        for column in subject_directory_attributes_value_features.columns:
-            if column in feature_columns:
-                features[column] = subject_directory_attributes_value_features[column]
-        features["Subject_Key_Identifier_Critical"] = self._fe_subject_key_identifier_critical(sample)
+        if classifier == 1:
+            features["OCSP_No_Check_Critical"] = self._fe_ocsp_no_check_critical(sample)
+            features["TLS_Feature_Critical"] = self._fe_tls_feature_critical(sample)
+            features["TLS_Feature_Features"] = self._fe_tls_feature_features(sample)
+            features["Unknown_OID_Critical"] = self._fe_unknown_oid_critical(sample)
+            unknown_oid_oid_features = self._fe_unknown_oid_oid(sample)
+            for column in unknown_oid_oid_features.columns:
+                if column in feature_columns:
+                    features[column] = unknown_oid_oid_features[column]
+                else:
+                    print("--------------" + column)
+            unknown_oid_value_features = self._fe_unknown_oid_value(sample)
+            for column in unknown_oid_value_features.columns:
+                if column in feature_columns:
+                    features[column] = unknown_oid_value_features[column]
+                else:
+                    print("--------------" + column)
+            features["Authority_Info_Access_Critical"] = self._fe_authority_info_access_critical(sample)
+            authority_info_access_ocsp_features = self._fe_authority_info_access_ocsp(sample)
+            for column in authority_info_access_ocsp_features.columns:
+                if column in feature_columns:
+                    features[column] = authority_info_access_ocsp_features[column]
+                else:
+                    print("--------------" + column)
+            authority_info_access_ca_issuers_features = self._fe_authority_info_access_ca_issuers(sample)
+            for column in authority_info_access_ca_issuers_features.columns:
+                if column in feature_columns:
+                    features[column] = authority_info_access_ca_issuers_features[column]
+                else:
+                    print("--------------" + column)
+            features["Authority_Key_Identifier_Critical"] = self._fe_authority_key_identifier_critical(sample)
+            authority_key_identifier_key_identifier_features = self._fe_authority_key_identifier_key_identifier(sample)
+            for column in authority_key_identifier_key_identifier_features.columns:
+                if column in feature_columns:
+                    features[column] = authority_key_identifier_key_identifier_features[column]
+                else:
+                    print("--------------" + column)
+            authority_key_identifier_authority_cert_issuer_features = self._fe_authority_key_identifier_authority_cert_issuer(sample)
+            for column in authority_key_identifier_authority_cert_issuer_features.columns:
+                if column in feature_columns:
+                    features[column] = authority_key_identifier_authority_cert_issuer_features[column]
+                else:
+                    print("--------------" + column)
+            authority_key_identifier_authority_cert_serial_number_features = self._fe_authority_key_identifier_authority_cert_serial_number(sample)
+            for column in authority_key_identifier_authority_cert_serial_number_features.columns:
+                if column in feature_columns:
+                    features[column] = authority_key_identifier_authority_cert_serial_number_features[column]
+                else:
+                    print("--------------" + column)
+            features["Basic_Constraints_Critical"] = self._fe_basic_constraints_critical(sample)
+            features["Basic_Constraints_CA"] = self._fe_basic_constraints_ca(sample)
+            basic_constraints_path_length_features = self._fe_basic_constraints_path_length(sample)
+            for column in basic_constraints_path_length_features.columns:
+                if column in feature_columns:
+                    features[column] = basic_constraints_path_length_features[column]
+                else:
+                    print("--------------" + column)
+            features["CRL_Distribution_Points_Critical"] = self._fe_crl_distribution_points_critical(sample)
+            crl_distribution_points_value_features = self._fe_crl_distribution_points_value(sample)
+            for column in crl_distribution_points_value_features.columns:
+                if column in feature_columns:
+                    features[column] = crl_distribution_points_value_features[column]
+                else:
+                    print("--------------" + column)
+            features["Certificate_Policies_Critical"] = self._fe_certificate_policies_critical(sample)
+            features["Certificate_Policies_Value"] = self._fe_certificate_policies_value(sample)
+            features["Extended_Key_Usage_Critical"] = self._fe_extended_key_usage_critical(sample)
+            features["Extended_Key_Usage_Server_Auth"] = self._fe_extended_key_usage_server_auth(sample)
+            features["Extended_Key_Usage_Client_Auth"] = self._fe_extended_key_usage_client_auth(sample)
+            features["Extended_Key_Usage_Unknown_OID"] = self._fe_extended_key_usage_unknown_oid(sample)
+            features["Extended_Key_Usage_OCSP_Signing"] = self._fe_extended_key_usage_ocsp_signing(sample)
+            features["Extended_Key_Usage_Code_Signing"] = self._fe_extended_key_usage_code_signing(sample)
+            features["Extended_Key_Usage_Email_Protection"] = self._fe_extended_key_usage_email_protection(sample)
+            features["Extended_Key_Usage_Time_Stamping"] = self._fe_extended_key_usage_time_stamping(sample)
+            features["Freshest_CRL_Critical"] = self._fe_freshest_crl_critical(sample)
+            freshest_crl_value_features = self._fe_freshest_crl_value(sample)
+            for column in freshest_crl_value_features.columns:
+                if column in feature_columns:
+                    features[column] = freshest_crl_value_features[column]
+                else:
+                    print("--------------" + column)
+            features["Issuer_Alt_Name_Critical"] = self._fe_issuer_alt_name_critical(sample)
+            issuer_alt_name_value_features = self._fe_issuer_alt_name_value(sample)
+            for column in issuer_alt_name_value_features.columns:
+                if column in feature_columns:
+                    features[column] = issuer_alt_name_value_features[column]
+                else:
+                    print("--------------" + column)
+            features["Key_Usage_Critical"] = self._fe_key_usage_critical(sample)
+            features["Key_Usage_Digital_Signature"] = self._fe_key_usage_digital_signature(sample)
+            features["Key_Usage_Content_Commitment"] = self._fe_key_usage_content_commitment(sample)
+            features["Key_Usage_Key_Encipherment"] = self._fe_key_usage_key_encipherment(sample)
+            features["Key_Usage_Data_Encipherment"] = self._fe_key_usage_data_encipherment(sample)
+            features["Key_Usage_Key_Agreement"] = self._fe_key_usage_key_agreement(sample)
+            features["Key_Usage_Key_Cert_Sign"] = self._fe_key_usage_key_cert_sign(sample)
+            features["Key_Usage_Crl_Sign"] = self._fe_key_usage_crl_sign(sample)
+            features["Key_Usage_Encipher_Only"] = self._fe_key_usage_encipher_only(sample)
+            features["Key_Usage_Decipher_Only"] = self._fe_key_usage_decipher_only(sample)
+            features["Signed_Certificate_Timestamp_List_Critical"] = self._fe_signed_certificate_timestamp_list_critical(
+                sample)
+            features["Signed_Certificate_Timestamp_List_Value"] = self._fe_signed_certificate_timestamp_list_value(sample)
+            features["Subject_Alt_Name_Critical"] = self._fe_subject_alt_name_critical(sample)
+            features["Subject_Alt_Name_Value"] = self._fe_subject_alt_name_value(sample)
+            features["Subject_Directory_Attributes_Critical"] = self._fe_subject_directory_attributes_critical(sample)
+            subject_directory_attributes_value_features = self._fe_subject_directory_attributes_value(sample)
+            for column in subject_directory_attributes_value_features.columns:
+                if column in feature_columns:
+                    features[column] = subject_directory_attributes_value_features[column]
+                else:
+                    print("--------------" + column)
+            features["Subject_Key_Identifier_Critical"] = self._fe_subject_key_identifier_critical(sample)
         features["Is_Extended_Validated"] = self._fe_is_extended_validated(sample)
         features["Is_Organization_Validated"] = self._fe_is_organization_validated(sample)
         features["Is_Domain_Validated"] = self._fe_is_domain_validated(sample)
@@ -355,18 +416,17 @@ class PhishFeatures:
                 extracted_item = list(extracted_elements)[0]
             feature.append(extracted_item)
         signature_algorithm = pd.DataFrame(feature, columns=["Signature_Algorithm"])
-        return pd.get_dummies(signature_algorithm["Signature_Algorithm"])
+        return pd.get_dummies(signature_algorithm["Signature_Algorithm"], prefix="Signature_Algorithm")
 
     @staticmethod
     def _fe_public_key_algorithm(sample):
-        return pd.get_dummies(sample["Signature_Algorithm"])
+        return pd.get_dummies(sample["Public_Key_Algorithm"], prefix="Public_Key_Algorithm")
 
     @staticmethod
     def _fe_public_key_length(sample):
-        return pd.get_dummies(sample["Public_Key_Length"])
+        return pd.get_dummies(sample["Public_Key_Length"], prefix="Public_Key_Length")
 
     """Issuer Subject"""
-
     def _fe_is_issuer_subject_same(self, sample):
         feature = []
         for i, row in sample.iterrows():
@@ -501,31 +561,31 @@ class PhishFeatures:
 
     @staticmethod
     def _fe_issuer_country_value(sample):
-        return pd.get_dummies(sample["Issuer_Country"])
+        return pd.get_dummies(sample["Issuer_Country"], prefix="Issuer_Country")
 
     @staticmethod
     def _fe_issuer_state_province_value(sample):
-        return pd.get_dummies(sample["Issuer_State_Province"])
+        return pd.get_dummies(sample["Issuer_State_Province"], prefix="Issuer_State_Province")
 
     @staticmethod
     def _fe_issuer_organization_value(sample):
-        return pd.get_dummies(sample["Issuer_Organization"])
+        return pd.get_dummies(sample["Issuer_Organization"], prefix="Issuer_Organization")
 
     @staticmethod
     def _fe_issuer_organizational_unit_value(sample):
-        return pd.get_dummies(sample["Issuer_Organizational_Unit"])
+        return pd.get_dummies(sample["Issuer_Organizational_Unit"], prefix="Issuer_Organizational_Unit")
 
     @staticmethod
     def _fe_issuer_common_name_value(sample):
-        return pd.get_dummies(sample["Issuer_Common_Name"])
+        return pd.get_dummies(sample["Issuer_Common_Name"], prefix="Issuer_Common_Name")
 
     @staticmethod
     def _fe_issuer_location_value(sample):
-        return pd.get_dummies(sample["Issuer_Location"])
+        return pd.get_dummies(sample["Issuer_Location"], prefix="Issuer_Location")
 
     @staticmethod
     def _fe_issuer_email_address_value(sample):
-        return pd.get_dummies(sample["Issuer_Email_Address"])
+        return pd.get_dummies(sample["Issuer_Email_Address"], prefix="Issuer_Email_Address")
 
     @staticmethod
     def _fe_has_issuer_country(sample):
@@ -777,11 +837,11 @@ class PhishFeatures:
 
     @staticmethod
     def _fe_subject_country_value(sample):
-        return pd.get_dummies(sample["Subject_Country"])
+        return pd.get_dummies(sample["Subject_Country"], prefix="Subject_Country")
 
     @staticmethod
     def _fe_subject_state_province_value(sample):
-        return pd.get_dummies(sample["Subject_State_Province"])
+        return pd.get_dummies(sample["Subject_State_Province"], prefix="Subject_State_Province")
 
     @staticmethod
     def _fe_has_subject_country(sample):
@@ -1053,7 +1113,7 @@ class PhishFeatures:
         unknown_oid_oid = sample["Unknown OID"].str.extract(regular)
         unknown_oid_oid.columns = ["Unknown_OID_OID"]
         unknown_oid_oid = unknown_oid_oid.fillna("")
-        return pd.get_dummies(unknown_oid_oid["Unknown_OID_OID"])
+        return pd.get_dummies(unknown_oid_oid["Unknown_OID_OID"], prefix="Unknown_OID_OID")
 
     @staticmethod
     def _fe_unknown_oid_value(sample):
@@ -1061,7 +1121,7 @@ class PhishFeatures:
         unknown_oid_value = sample["Unknown OID"].str.extract(regular)
         unknown_oid_value.columns = ["Unknown_OID_Value"]
         unknown_oid_value = unknown_oid_value.fillna("")
-        return pd.get_dummies(unknown_oid_value["Unknown_OID_Value"])
+        return pd.get_dummies(unknown_oid_value["Unknown_OID_Value"], prefix="Unknown_OID_Value")
 
     @staticmethod
     def _fe_authority_info_access_critical(sample):
@@ -1081,7 +1141,8 @@ class PhishFeatures:
             ",".join(sorted(item)) if len(item) > 0 else ""
             for item in authority_info_access_ocsp["Authority_Info_Access_OCSP"]
         ]
-        return pd.get_dummies(authority_info_access_ocsp["Authority_Info_Access_OCSP"])
+        return pd.get_dummies(authority_info_access_ocsp["Authority_Info_Access_OCSP"],
+                              prefix="Authority_Info_Access_OCSP")
 
     @staticmethod
     def _fe_authority_info_access_ca_issuers(sample):
@@ -1092,7 +1153,8 @@ class PhishFeatures:
             ",".join(sorted(item)) if len(item) > 0 else ""
             for item in authority_info_access_ca_issuers["Authority_Info_Access_CA_Issuers"]
         ]
-        return pd.get_dummies(authority_info_access_ca_issuers["Authority_Info_Access_CA_Issuers"])
+        return pd.get_dummies(authority_info_access_ca_issuers["Authority_Info_Access_CA_Issuers"],
+                              prefix="Authority_Info_Access_CA_Issuers")
 
     @staticmethod
     def _fe_authority_key_identifier_critical(sample):
@@ -1109,7 +1171,8 @@ class PhishFeatures:
         authority_key_identifier_key_identifier = sample["authorityKeyIdentifier"].str.extract(regular)
         authority_key_identifier_key_identifier.columns = ["Authority_Key_Identifier_Key_Identifier"]
         authority_key_identifier_key_identifier = authority_key_identifier_key_identifier.fillna("")
-        return pd.get_dummies(authority_key_identifier_key_identifier["Authority_Key_Identifier_Key_Identifier"])
+        return pd.get_dummies(authority_key_identifier_key_identifier["Authority_Key_Identifier_Key_Identifier"],
+                              prefix="Authority_Key_Identifier_Key_Identifier")
 
     @staticmethod
     def _fe_authority_key_identifier_authority_cert_issuer(sample):
@@ -1117,18 +1180,17 @@ class PhishFeatures:
         authority_key_identifier_authority_cert_issuer = sample["authorityKeyIdentifier"].str.extract(regular)
         authority_key_identifier_authority_cert_issuer.columns = ["Authority_Key_Identifier_Authority_Cert_Issuer"]
         authority_key_identifier_authority_cert_issuer = authority_key_identifier_authority_cert_issuer.fillna("")
-        return pd.get_dummies(
-            authority_key_identifier_authority_cert_issuer["Authority_Key_Identifier_Authority_Cert_Issuer"])
+        return pd.get_dummies(authority_key_identifier_authority_cert_issuer["Authority_Key_Identifier_Authority_Cert_Issuer"],
+                              prefix="Authority_Key_Identifier_Authority_Cert_Issuer")
 
     @staticmethod
     def _fe_authority_key_identifier_authority_cert_serial_number(sample):
         regular = "authority_cert_serial_number=(.*?)\)>"
         authority_key_identifier_authority_cert_serial_number = sample["authorityKeyIdentifier"].str.extract(regular)
-        authority_key_identifier_authority_cert_serial_number.columns = [
-            "Authority_Key_Identifier_Authority_Cert_Serial_Number"]
+        authority_key_identifier_authority_cert_serial_number.columns = ["Authority_Key_Identifier_Authority_Cert_Serial_Number"]
         authority_key_identifier_authority_cert_serial_number = authority_key_identifier_authority_cert_serial_number.fillna("")
-        return pd.get_dummies(authority_key_identifier_authority_cert_serial_number[
-                                  "Authority_Key_Identifier_Authority_Cert_Serial_Number"])
+        return pd.get_dummies(authority_key_identifier_authority_cert_serial_number["Authority_Key_Identifier_Authority_Cert_Serial_Number"],
+                              prefix="Authority_Key_Identifier_Authority_Cert_Serial_Number")
 
     @staticmethod
     def _fe_basic_constraints_critical(sample):
@@ -1154,7 +1216,8 @@ class PhishFeatures:
         basic_constraints_path_length = sample["basicConstraints"].str.extract(regular)
         basic_constraints_path_length.columns = ["Basic_Constraints_Path_Length"]
         basic_constraints_path_length = basic_constraints_path_length.fillna("")
-        return pd.get_dummies(basic_constraints_path_length["Basic_Constraints_Path_Length"])
+        return pd.get_dummies(basic_constraints_path_length["Basic_Constraints_Path_Length"],
+                              prefix="Basic_Constraints_Path_Length")
 
     @staticmethod
     def _fe_crl_distribution_points_critical(sample):
@@ -1187,7 +1250,8 @@ class PhishFeatures:
             else:
                 value.append("")
         crl_distribution_points_value = pd.DataFrame({"CRL_Distribution_Points_Value": value})
-        return pd.get_dummies(crl_distribution_points_value["CRL_Distribution_Points_Value"])
+        return pd.get_dummies(crl_distribution_points_value["CRL_Distribution_Points_Value"],
+                              prefix="CRL_Distribution_Points_Value")
 
     @staticmethod
     def _fe_certificate_policies_critical(sample):
@@ -1457,7 +1521,7 @@ class PhishFeatures:
             else:
                 value.append("")
         freshest_crl_value = pd.DataFrame({"Freshest_CRL_Value": value})
-        return pd.get_dummies(freshest_crl_value["Freshest_CRL_Value"])
+        return pd.get_dummies(freshest_crl_value["Freshest_CRL_Value"], prefix="Freshest_CRL_Value")
 
     @staticmethod
     def _fe_issuer_alt_name_critical(sample):
@@ -1475,9 +1539,9 @@ class PhishFeatures:
         issuer_alt_name_value.columns = ["Issuer_Alt_Name_Value"]
         issuer_alt_name_value["Issuer_Alt_Name_Value"] = [
             ["" if element == "" else "<" + element + ")>"
-            if not element.startswith("<") and not element.endswith(")>") else "<" + element
-            if not element.startswith("<") else element + ")>"
-            if not element.endswith(")>") else element
+             if not element.startswith("<") and not element.endswith(")>") else "<" + element
+             if not element.startswith("<") else element + ")>"
+             if not element.endswith(")>") else element
              for element in item.split(")>, <")]
             if pd.notnull(item) else [] for item in issuer_alt_name_value["Issuer_Alt_Name_Value"]
         ]
@@ -1485,7 +1549,7 @@ class PhishFeatures:
             ",".join(sorted(item)) if len(item) > 0 else ""
             for item in issuer_alt_name_value["Issuer_Alt_Name_Value"]
         ]
-        return pd.get_dummies(issuer_alt_name_value["Issuer_Alt_Name_Value"])
+        return pd.get_dummies(issuer_alt_name_value["Issuer_Alt_Name_Value"], prefix="Issuer_Alt_Name_Value")
 
     @staticmethod
     def _fe_key_usage_critical(sample):
@@ -1582,8 +1646,7 @@ class PhishFeatures:
         regular = "critical=(.*?), "
         signed_certificate_timestamp_list_critical = sample["signedCertificateTimestampList"].str.extract(regular)
         signed_certificate_timestamp_list_critical.columns = ["Signed_Certificate_Timestamp_List_Critical"]
-        signed_certificate_timestamp_list_critical = signed_certificate_timestamp_list_critical.replace(
-            {"False": 0, "True": 1})
+        signed_certificate_timestamp_list_critical = signed_certificate_timestamp_list_critical.replace({"False": 0, "True": 1})
         signed_certificate_timestamp_list_critical = signed_certificate_timestamp_list_critical.fillna(-1)
         return signed_certificate_timestamp_list_critical
 
@@ -1617,8 +1680,8 @@ class PhishFeatures:
         subject_alt_name_value.columns = ["Subject_Alt_Name_Value"]
         subject_alt_name_value["Subject_Alt_Name_Value"] = [
             ["<" + element + ")>" if not element.startswith("<") and not element.endswith(")>") else "<" + element
-            if not element.startswith("<") else element + ")>"
-            if not element.endswith(")>") else element
+             if not element.startswith("<") else element + ")>"
+             if not element.endswith(")>") else element
              for element in item.split(")>, <")]
             if pd.notnull(item) else [] for item in subject_alt_name_value["Subject_Alt_Name_Value"]
         ]
@@ -1642,7 +1705,8 @@ class PhishFeatures:
         subject_directory_attributes_value = sample["subjectDirectoryAttributes"].str.extract(regular)
         subject_directory_attributes_value.columns = ["Subject_Directory_Attributes_Value"]
         subject_directory_attributes_value = subject_directory_attributes_value.fillna("")
-        return pd.get_dummies(subject_directory_attributes_value["Subject_Directory_Attributes_Value"])
+        return pd.get_dummies(subject_directory_attributes_value["Subject_Directory_Attributes_Value"],
+                              prefix="Subject_Directory_Attributes_Value")
 
     @staticmethod
     def _fe_subject_key_identifier_critical(sample):

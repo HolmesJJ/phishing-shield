@@ -53,7 +53,7 @@ def train():
         for j in range(len(row)):
             row[j] = math.log(row[j] / s)
 
-    pickle.dump({"mat": counts}, open("gib_model.pki", "wb"))
+    pickle.dump({"mat": counts}, open("gib_model.pkl", "wb"))
 
 
 def avg_transition_prob(l, log_prob_mat):

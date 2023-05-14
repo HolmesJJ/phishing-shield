@@ -12,14 +12,18 @@ from features import PhishFeatures
 
 
 MODEL_PATHS = {
-    "random-forest": "classifiers/random-forest.pkl",
-    "scaler": "classifiers/scaler.pkl",
-    "pca": "classifiers/pca.pkl",
+    "pca1": "classifiers/pca1.pkl",
+    "scaler1": "classifiers/scaler1.pkl",
+    "random-forest1": "classifiers/random-forest1.pkl",
+    "random-forest2": "classifiers/random-forest2.pkl",
 }
 
-scaler = pickle.load(open(MODEL_PATHS["scaler"], "rb"))
-pca = pickle.load(open(MODEL_PATHS["pca"], "rb"))
-classifier = pickle.load(open(MODEL_PATHS["random-forest"], "rb"))
+scaler1 = pickle.load(open(MODEL_PATHS["scaler1"], "rb"))
+pca1 = pickle.load(open(MODEL_PATHS["pca1"], "rb"))
+classifier1 = pickle.load(open(MODEL_PATHS["random-forest1"], "rb"))
+classifier2 = pickle.load(open(MODEL_PATHS["random-forest2"], "rb"))
+
+CLASSIFIER = 1
 
 application = Flask(__name__)
 cors = CORS(application)
@@ -49,19 +53,25 @@ def detect():
         }
     host = "https://" + urlparse(url).netloc
     cert_info_path = export(host)
-    if cert_info_path:
-        cert_info = PhishFeatures().compute_samples(cert_info_path)
-        os.remove(cert_info_path)
-        features = PhishFeatures().compute_features(cert_info)
-        print(features)
-        scaled_features = scaler.transform(features)
-        pca_features = pd.DataFrame(data=pca.transform(scaled_features),
+    if cert_info_path is None:
+        return {
+            "code": -1,
+            "message": "success"
+        }
+    cert_info = PhishFeatures().compute_samples(cert_info_path)
+    os.remove(cert_info_path)
+    if CLASSIFIER == 1:
+        features = PhishFeatures().compute_features(cert_info, classifier=1)
+        scaled_features = scaler1.transform(features)
+        pca_features = pd.DataFrame(data=pca1.transform(scaled_features),
                                     columns=["PC" + str(i + 1) for i in range(150)])
-        print(pca_features)
-        score = classifier.predict_proba(pca_features)[:, 1]
-        print(score)
+        score = classifier1.predict_proba(pca_features)[:, 1]
+    else:
+        features = PhishFeatures().compute_features(cert_info, classifier=2)
+        score = classifier2.predict_proba(features)[:, 1]
+    print(score)
     return {
-        "code": 1,
+        "code": 1 if score > 0.5 else 0,
         "message": "success"
     }
 
